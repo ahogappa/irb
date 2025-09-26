@@ -24,6 +24,32 @@ module IRB # :nodoc:
       load_file(path, priv)
     end
 
+    def irb_require(fn)
+      rex = Regexp.new("#{Regexp.quote(fn)}(\.o|\.rb)?")
+      return false if $".find{|f| f =~ rex}
+
+      case fn
+      when /\.rb$/
+        begin
+          if irb_load(fn)
+            $".push fn
+            return true
+          end
+        rescue LoadError
+        end
+      when /\.(so|o|sl)$/
+        return ruby_require(fn)
+      end
+
+      begin
+        irb_load(f = fn + ".rb")
+        $".push f
+        return true
+      rescue LoadError
+        return ruby_require(fn)
+      end
+    end
+
     def search_file_from_ruby_path(fn) # :nodoc:
       if File.absolute_path?(fn)
         return fn if File.exist?(fn)
@@ -42,7 +68,7 @@ module IRB # :nodoc:
     #
     # See Irb#suspend_input_method for more information.
     def source_file(path)
-      irb = irb_context.irb
+      irb = IRB.conf[:MAIN_CONTEXT].irb
       irb.suspend_name(path, File.basename(path)) do
         FileInputMethod.open(path) do |io|
           irb.suspend_input_method(io) do
@@ -67,7 +93,7 @@ module IRB # :nodoc:
     #
     # See Irb#suspend_input_method for more information.
     def load_file(path, priv = nil)
-      irb = irb_context.irb
+      irb = IRB.conf[:MAIN_CONTEXT].irb
       irb.suspend_name(path, File.basename(path)) do
 
         if priv

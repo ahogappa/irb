@@ -45,29 +45,7 @@ module IRB
       def execute_internal(file_name = nil)
         raise_cmd_argument_error unless file_name
 
-        rex = Regexp.new("#{Regexp.quote(file_name)}(\.o|\.rb)?")
-        return false if $".find{|f| f =~ rex}
-
-        case file_name
-        when /\.rb$/
-          begin
-            if irb_load(file_name)
-              $".push file_name
-              return true
-            end
-          rescue LoadError
-          end
-        when /\.(so|o|sl)$/
-          return ruby_require(file_name)
-        end
-
-        begin
-          irb_load(f = file_name + ".rb")
-          $".push f
-          return true
-        rescue LoadError
-          return ruby_require(file_name)
-        end
+        irb_require(file_name)
       end
     end
 
